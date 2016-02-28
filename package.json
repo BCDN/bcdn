@@ -1,0 +1,51 @@
+{
+  "author": {
+    "email": "viz@linux.com",
+    "name": "Wenxuan Zhao",
+    "url": "https://viz.pw/"
+  },
+  "bugs": {
+    "url": "https://git.vizv.com/bcdn/bcdn/issues"
+  },
+  "dependencies": {
+    "coffee-script": "^1.10.0",
+    "debug": "^2.2.0",
+    "simple-peer": "^5.11.9",
+    "wrtc": "0.0.59",
+    "ws": "^1.0.1"
+  },
+  "description": "Browser-side CDN",
+  "devDependencies": {},
+  "directories": {},
+  "homepage": "https://git.vizv.com/bcdn/bcdn",
+  "keywords": [
+    "bcdn",
+    "webrtc",
+    "cdn",
+    "p2p",
+    "data channel",
+    "data channels",
+    "data",
+    "peer-to-peer",
+    "peer"
+  ],
+  "license": "MIT",
+  "main": "lib/index.js",
+  "maintainers": [
+    {
+      "email": "viz@linux.com",
+      "name": "Wenxuan Zhao"
+    }
+  ],
+  "name": "bcdn",
+  "optionalDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@git.vizv.com:2222/bcdn/bcdn.git"
+  },
+  "scripts": {
+    "postinstall": "coffee -c .",
+    "clean": "find lib -type f -name '*.js' -exec rm '{}' \\;"
+  },
+  "version": "0.1.0"
+}
