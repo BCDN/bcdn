@@ -46,7 +46,7 @@
   },
   "scripts": {
     "postinstall": "coffee -c .",
-    "clean": "find lib -type f -name '*.js' -exec rm '{}' \\;"
+    "clean": "rm *.js; find lib -type f -name '*.js' -exec rm '{}' \\;"
   },
   "version": "0.1.0"
 }
