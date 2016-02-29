@@ -10,6 +10,7 @@
   "dependencies": {
     "coffee-script": "^1.10.0",
     "debug": "^2.2.0",
+    "lodash": "^4.5.1",
     "simple-peer": "^5.11.9",
     "wrtc": "0.0.59",
     "ws": "^1.0.1"
@@ -30,7 +31,7 @@
     "peer"
   ],
   "license": "MIT",
-  "main": "lib/index.js",
+  "main": "index.js",
   "maintainers": [
     {
       "email": "viz@linux.com",
