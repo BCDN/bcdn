@@ -16,7 +16,9 @@
     "ws": "^1.0.1"
   },
   "description": "Browser-side CDN",
-  "devDependencies": {},
+  "devDependencies": {
+    "optimist": "^0.6.1"
+  },
   "directories": {},
   "homepage": "https://git.vizv.com/bcdn/bcdn",
   "keywords": [
@@ -45,6 +47,7 @@
     "url": "ssh://git@git.vizv.com:2222/bcdn/bcdn.git"
   },
   "scripts": {
+    "start": "coffee bin/bcdn-tester",
     "postinstall": "coffee -c .",
     "clean": "rm *.js; find lib -type f -name '*.js' -exec rm '{}' \\;"
   },

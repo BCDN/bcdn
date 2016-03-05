@@ -1,4 +1,3 @@
-mix = require './mix'
 Serializable = require './Serializable'
 
 exports = module.exports = class Contents extends Serializable
