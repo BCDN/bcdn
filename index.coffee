@@ -19,5 +19,5 @@ module.exports = class BCDN
 
     # save peer id after joined
     @trackerConn.on 'JOINED', (payload) ->
-      {@peerId} = payload
-      @constructor.info "tracker has accepted the join request, peer ID: #{@peerId}"
+      {id} = payload
+      @constructor.info "tracker has accepted the join request, peer ID: #{id}"
