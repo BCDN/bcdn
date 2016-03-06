@@ -22,15 +22,18 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
         @send content
 
       # helper to handle message
-      handleMessage = (data) =>
+      handleMessage = (data, close = false) =>
         try
           content = @deserialize data
         catch e
           @constructor.debug "error to deserialize: #{e}, (data=#{data})"
           return
 
-        # ignore malformed messages
-        return unless content.type?
+        #  sanitize malformed messages
+        return unless content.type in ['ERROR', 'JOINED']
+
+        action = if close then "closed the connection with" else "sent"
+        @constructor.debug "tracker has #{action} a message (data=#{data})"
 
         # emit event
         @emit content.type, content.payload
