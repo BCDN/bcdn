@@ -5,6 +5,8 @@ exports = module.exports = class Contents extends Serializable
     @timestamp = 0
     @resources = {} # path => {hash, size, auto}
 
+
+
   # update contents from tracker node (note: might be called multiple times)
   update: (data) ->
     {_timestamp, _resources} = @deserialize data

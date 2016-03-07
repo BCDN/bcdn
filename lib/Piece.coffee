@@ -2,6 +2,8 @@ exports = module.exports = class Piece
   constructor: (@hash, @size) ->
     @data = null
 
+
+
   # write the piece data after verified
   verifyAndWrite: (data) ->
     return if @data?

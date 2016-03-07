@@ -1,4 +1,7 @@
 exports = module.exports =
-  Peer: require './lib/Peer'
-  Contents: require './lib/Contents'
+  BCDNPeer:     require './lib/BCDNPeer'
+  Contents:     require './lib/Contents'
+  Peer:         require './lib/Peer'
+  Tracker:      require './lib/Tracker'
   Serializable: require './lib/Serializable'
+  mix:          require './lib/mix'

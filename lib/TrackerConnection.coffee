@@ -1,39 +1,34 @@
 WebSocket = require 'ws'
+
 Serializable = require './Serializable'
 mix = require './mix'
+
 logger = require 'debug'
 
 exports = module.exports = class TrackerConnection extends mix WebSocket
                                                              , Serializable
-  @debug: logger 'tracker:debug'
-  @info: logger 'tracker:info'
-  @error: logger 'tracker:error'
-  constructor: (trackers = [], @key, @token) ->
+  debug: logger 'TrackerConnection:debug'
+  info: logger 'TrackerConnection:info'
+  error: logger 'TrackerConnection:error'
+
+  constructor: (trackers = [], @peer) ->
     # TODO: maybe move to disconnect event for exception handling (reconnect)?
     @selectNearestTracker trackers, (tracker) =>
-      super tracker
-
-      # join the network when tracker is ready
-      @on 'ready', =>
-        # generate token if not provided
-        @token ?= @generateToken()
-
-        content = @serialize type: 'JOIN', payload: token: @token
-        @send content
+      generateToken = -> Math.random().toString(36).substr(2)
+      super "#{tracker}&token=#{@peer.token ?= generateToken()}"
 
       # helper to handle message
       handleMessage = (data, close = false) =>
         try
           content = @deserialize data
         catch e
-          @constructor.debug "error to deserialize: #{e}, (data=#{data})"
-          return
+          return @debug "error to deserialize: #{e}, (data=#{data})"
 
         #  sanitize malformed messages
         return unless content.type in ['ERROR', 'JOINED']
 
-        action = if close then "closed the connection with" else "sent"
-        @constructor.debug "tracker has #{action} a message (data=#{data})"
+        _action = if close then "closed the connection with" else "sent"
+        @debug "tracker has #{_action} a message (data=#{data})"
 
         # emit event
         @emit content.type, content.payload
@@ -52,23 +47,24 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
 
         @emit 'ERROR', msg: "socket has closed unexpected, (code=#{code})"
 
-      @on 'open', => @emit 'ready'
+
 
   selectNearestTracker: (trackers, cb) ->
-    @constructor.info "selecting the nearest tracker from #{trackers}..."
+    @info "selecting the nearest tracker from #{trackers}..."
 
     minPing = Infinity
     nearestTracker = null
 
+
     # select the tracker with least ping
     for tracker in trackers
-      url = "#{tracker}?key=#{@key}"
+      url = "#{tracker}?key=#{@peer.key}"
       socket = new WebSocket url
 
       now = undefined
       socket.on 'pong', =>
         ping = new Date().getTime() - now
-        @constructor.debug "ping for #{tracker}: #{ping}ms"
+        @debug "ping for #{tracker}: #{ping}ms"
 
         if ping < minPing
           minPing = ping
@@ -79,16 +75,15 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
       socket.on 'open', =>
         now = new Date().getTime()
         socket.ping 'HELLO'
-        @constructor.debug "pinging #{tracker}..."
+        @debug "pinging #{tracker}..."
 
-    # wait for connection
+
+    # wait for result
     checkInterval = 100 # 100 milliseconds
     wait = setInterval =>
       if nearestTracker?
         clearInterval wait
-        @constructor.info "select #{nearestTracker} as the nearest tracker"
+        @info "select #{nearestTracker} as the nearest tracker"
 
         cb nearestTracker
     , checkInterval
-
-  generateToken: -> Math.random().toString(36).substr(2)

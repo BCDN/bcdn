@@ -1,4 +1,5 @@
 _ = require 'lodash/core'
+
 Serializable = require './Serializable'
 ResourceState = require './ResourceState'
 
@@ -9,9 +10,13 @@ exports = module.exports = class Resource extends Serializable
     @pieces = null
     @state = null
 
+
+
   # update resource from tracker node (note: only called once when preparing)
   prepare: (data) ->
     @pieces = @deserialize data
+
+
 
   # get blob for resource
   # TODO: check if update arraybuffer will update blob data
