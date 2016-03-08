@@ -1,5 +1,3 @@
-_ = require 'lodash/core'
-
 Serializable = require './Serializable'
 ResourceState = require './ResourceState'
 
