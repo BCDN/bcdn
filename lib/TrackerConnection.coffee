@@ -61,6 +61,9 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
       url = "#{tracker}?key=#{@peer.key}"
       socket = new WebSocket url
 
+      socket.on 'error', (error) =>
+        @debug "error on ping tracker #{tracker} - #{error}"
+
       now = undefined
       socket.on 'pong', =>
         ping = new Date().getTime() - now
@@ -79,10 +82,17 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
 
 
     # wait for result
+    waitTimeout = 10000 # 10 seconds
     checkInterval = 100 # 100 milliseconds
-    wait = setInterval =>
+
+    wait = setTimeout =>
+      throw new Error "no tracker available"
+    , waitTimeout
+
+    check = setInterval =>
       if nearestTracker?
         clearInterval wait
+        clearInterval check
         @info "select #{nearestTracker} as the nearest tracker"
 
         cb nearestTracker
