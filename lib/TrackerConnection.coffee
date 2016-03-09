@@ -7,6 +7,7 @@ logger = require 'debug'
 
 exports = module.exports = class TrackerConnection extends mix WebSocket
                                                              , Serializable
+  verbose: logger 'TrackerConnection:verbose'
   debug: logger 'TrackerConnection:debug'
   info: logger 'TrackerConnection:info'
   error: logger 'TrackerConnection:error'
@@ -25,10 +26,10 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
           return @debug "error to deserialize: #{e}, (data=#{data})"
 
         #  sanitize malformed messages
-        return unless content.type in ['ERROR', 'JOINED', 'UPDATE']
+        return unless content.type in ['ERROR', 'JOINED', 'UPDATE', 'INDEX']
 
         _action = if close then "closed the connection with" else "sent"
-        @debug "tracker has #{_action} a message (data=#{data})"
+        @verbose "tracker has #{_action} a message (data=#{data})"
 
         # emit event
         @emit content.type, content.payload
@@ -97,3 +98,14 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
 
         cb nearestTracker
     , checkInterval
+
+
+
+  send: (msg) ->
+    content = @serialize msg
+    super content
+    @verbose "message sent to tracker: #{content}"
+
+
+
+  queryResource: (hash) -> @send type: 'RESOURCE', payload: hash: hash

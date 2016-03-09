@@ -17,7 +17,7 @@ exports = module.exports = class Contents extends Serializable
       oldRes = @resources[path]
       unless _.isEqual oldRes, newRes
         @resources[path] = newRes
-        cb newRes.hash
+        cb path, newRes
 
     # update timestamp
     @timestamp = timestamp

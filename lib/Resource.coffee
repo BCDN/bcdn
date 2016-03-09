@@ -2,17 +2,11 @@ Serializable = require './Serializable'
 ResourceState = require './ResourceState'
 
 exports = module.exports = class Resource extends Serializable
-  constructor: (@hash, @size, @auto) ->
+  constructor: (@hash = null) ->
     @blob = null
     @uploadSize = 0
     @pieces = null
     @state = null
-
-
-
-  # update resource from tracker node (note: only called once when preparing)
-  prepare: (data) ->
-    @pieces = @deserialize data
 
 
 
@@ -27,3 +21,13 @@ exports = module.exports = class Resource extends Serializable
     pieces = [] # TODO: query resource manager for pieces
 
     @blob = new Blob pieces
+
+
+
+  deserialize: (data) ->
+    {@hash, @pieces} = super data
+
+
+
+  serialize: ->
+    super hash: @hash, pieces: @pieces
