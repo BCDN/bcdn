@@ -48,3 +48,5 @@ exports = module.exports = class BCDNPeer
       @debug "contents has been updated: #{@contents.serialize()}"
     # resource index received
     @trackerConn.on 'INDEX', (payload) => @resources.updateIndex payload
+    @trackerConn.on 'CANDIDATE', (payload) =>
+      @debug "FIXME: handle CANDIDATE event: #{JSON.stringify payload}"

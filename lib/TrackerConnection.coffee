@@ -26,7 +26,8 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
           return @debug "error to deserialize: #{e}, (data=#{data})"
 
         #  sanitize malformed messages
-        return unless content.type in ['ERROR', 'JOINED', 'UPDATE', 'INDEX']
+        return unless content.type in ['ERROR', 'JOINED', 'UPDATE', 'INDEX',
+                                       'CANDIDATE']
 
         _action = if close then "closed the connection with" else "sent"
         @verbose "tracker has #{_action} a message (data=#{data})"
