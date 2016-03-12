@@ -27,7 +27,7 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
 
         #  sanitize malformed messages
         return unless content.type in ['ERROR', 'JOINED', 'UPDATE', 'INDEX',
-                                       'CANDIDATE']
+                                       'CANDIDATE', 'SIGNAL']
 
         _action = if close then "closed the connection with" else "sent"
         @verbose "tracker has #{_action} a message (data=#{data})"
@@ -109,4 +109,5 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
 
 
 
-  queryResource: (hash) -> @send type: 'RESOURCE', payload: hash: hash
+  queryResource: (hash) -> @send type: 'RESOURCE', payload: hash
+  signal: (detail) ->      @send type: 'SIGNAL',   payload: detail

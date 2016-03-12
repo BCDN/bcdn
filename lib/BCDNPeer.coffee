@@ -2,6 +2,7 @@ Peer = require './Peer'
 Contents = require './Contents'
 TrackerConnection = require './TrackerConnection'
 ResourceManager = require './ResourceManager'
+PeerManager = require './PeerManager'
 
 logger = require 'debug'
 
@@ -24,7 +25,7 @@ exports = module.exports = class BCDNPeer
     @contents = new Contents()
     @resources = new ResourceManager()
     @trackerConn = new TrackerConnection trackers, @peer
-    # TODO: add PeerManager
+    @peers = new PeerManager @peer, options
 
 
     # report error on tracker connection error
@@ -43,10 +44,33 @@ exports = module.exports = class BCDNPeer
 
         # if the resource requires auto-load or is tracking, fetch it's pieces
         if resource.auto or @resources.get(resource.hash)?
-          @trackerConn.queryResource resource.hash
+          @trackerConn.queryResource hash: resource.hash
 
       @debug "contents has been updated: #{@contents.serialize()}"
     # resource index received
     @trackerConn.on 'INDEX', (payload) => @resources.updateIndex payload
     @trackerConn.on 'CANDIDATE', (payload) =>
-      @debug "FIXME: handle CANDIDATE event: #{JSON.stringify payload}"
+      {hash, downloading, sharing} = payload
+      for peer in sharing.concat downloading
+        @peers.connect peer, (event, data) =>
+          switch event
+            when 'signal'
+              @trackerConn.signal to: peer, signal: data
+            when 'connect'
+              @debug "FIXME: handle connection to #{peer}"
+            when 'data'
+              @debug "FIXME: handle data from #{peer}: #{data}"
+
+      # FIXME: add other information to download manager
+    @trackerConn.on 'SIGNAL', (payload) =>
+      {from} = payload
+      peer = from
+      @peers.accept from, (event, data) =>
+        switch event
+          when 'signal'
+            @trackerConn.signal to: peer, signal: data
+          when 'connect'
+            @debug "FIXME: handle connection from #{peer}"
+          when 'data'
+            @debug "FIXME: handle data from #{peer}: #{data}"
+      @peers.processSignal payload

@@ -23,5 +23,6 @@ unless process.env.DEBUG
   process.on 'uncaughtException', (err) ->
     console.error "Error: #{err}"
 
+opts.wrtc = require 'wrtc'
 peer = new BCDNPeer opts, (peer) ->
   console.log "Peer initialzed (v. #{version})"
