@@ -42,7 +42,3 @@ exports = module.exports = class DownloadManager extends EventEmiter
       @running.add hash
 
       @emit 'ready', @tasks[hash]
-
-  addCandidates: (hash, peers) ->
-    @debug "add candidates for #{hash}: #{peers}"
-    @tasks[hash].candidates.add peer for peer in peers

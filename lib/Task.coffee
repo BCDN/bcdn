@@ -10,13 +10,12 @@ exports = module.exports = class Task extends Resource
 
   debug: logger 'Task:debug'
 
-  candidates: new Set()
-
-  # missing:[hash]
+  # missing: Set[hash]
   missing: new Set()
-  # found/schedule[hash] => [peerId]
+  # found[hash] => Set[peerId]
   found: {}
-  scheduled: {}
+  # scheduled: Set[hash]
+  scheduled: new Set()
   # hit[hash] => Piece
   hit: {}
 

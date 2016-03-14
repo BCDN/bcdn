@@ -47,8 +47,11 @@ exports = module.exports = class PeerManager extends EventEmiter
       @verbose "ready to signal #{peerConn.id}"
       @emit 'signal', peerConn, data
     peerConn.on 'CONNECT', =>
-      @debug "connected to #{peerConn.id}"
+      @info "connected to #{peerConn.id}"
       @emit 'connect', peerConn
+    peerConn.on 'CLOSE', =>
+      @info "peer #{peerConn.id} has closed the connection"
+      @emit 'close', peerConn
     peerConn.on 'HELLO', (data) =>
       @debug "got handshake from #{peerConn.id}"
       @emit 'handshake', peerConn, data

@@ -10,8 +10,9 @@ exports = module.exports = class PeerConnection extends mix SimplePeer
   debug: logger 'PeerConnection:debug'
   info: logger 'PeerConnection:info'
 
-  # tasks it attached to
-  tasks: new Set()
+  # tasks it attached to and pieces it has (don't notify resource it has)
+  # pieces[hash] => Set[pieces]
+  pieces: {}
 
   constructor: (@id, options) ->
     @debug "Create PeerConnection for #{@id}, initiator: #{!!options.initiator}"
@@ -35,6 +36,7 @@ exports = module.exports = class PeerConnection extends mix SimplePeer
       # emit information
       @emit content.type, content.payload
     @on 'connect', => @emit 'CONNECT'
+    @on 'close', => @emit 'CLOSE'
 
   send: (msg) ->
     content = @serialize msg

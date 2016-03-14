@@ -53,16 +53,15 @@ exports = module.exports = class BCDNPeer
     # resource info received
     @trackerConn.on 'RESOURCE', (payload) =>
       {hash, resource, candidates} = payload
-      @download.addCandidates hash, candidates
       @download.prepare hash, resource
 
       # connect all possible candidates
       task = @download.tasks[hash]
-      task.candidates.forEach (peer) =>
+      candidates.forEach (peer) =>
         if (peerConn = @peers.connect peer)?
           # attach current task to peer connection
           # TODO: remove the attached task after task has finished
-          peerConn.tasks.add task.hash
+          peerConn.pieces[task.hash] = new Set()
 
           # resend hello if new task was added
           @peers.emit 'connect', peerConn if peerConn.connected
@@ -80,11 +79,12 @@ exports = module.exports = class BCDNPeer
 
     @peers.on 'signal', (peerConn, data) =>
       @trackerConn.signal to: peerConn.id, signal: data
+
     @peers.on 'connect', (peerConn) =>
       # construct information for handshaking we has for this peer
       # info[resourceHash] => state: TaskState, pieces: [piecesHit]
       info = {}
-      peerConn.tasks.forEach (hash) =>
+      for hash in Object.keys peerConn.pieces
         task = @download.tasks[hash]
         # set state
         info[hash] = state: task.state
@@ -93,8 +93,25 @@ exports = module.exports = class BCDNPeer
           info[hash].pieces = Object.keys task.hit
 
       peerConn.handshake info
+
+    @peers.on 'close', (peerConn) =>
+      # remove piece tracking for peer from task
+      for hash, pieces of peerConn.pieces
+        task = @download.tasks[hash]
+        for piece in pieces
+          task.found[piece].delete peerConn.id
+
+          # if no more peer has this piece, unschedule it move it back to missing
+          if task.found[piece].size is 0
+            task.scheduled.delete piece
+            delete task.found[piece]
+            task.missing.add piece
+          # FIXME: need test
+        @debug "DEBUG close result:", task.missing, task.found
+
     @peers.on 'handshake', (peerConn, info) =>
       flagReconnect = false
+      @debug "DEBUG handshake info:", info
 
       for hash, tracking of info
         # for downloading tasks only
@@ -102,20 +119,26 @@ exports = module.exports = class BCDNPeer
         continue unless task.state == Task.DOWNLOADING
 
         # attach tasks if not added
-        unless peerConn.tasks.has hash
-          peerConn.tasks.add hash
+        unless peerConn.pieces[hash]?
+          peerConn.pieces[hash] = new Set()
           flagReconnect = true
 
         # retrieve pieces from tracking info
         {state, pieces} = tracking
         pieces = task.pieces if tracking.state == Task.SHARING
 
-        # for pieces haven't been downloaded or scheduled
-        for hash in pieces when not (task.hit[hash]? or task.schedule[hash]?)
-          # move from missing to found
-          task.missing.delete hash
-          task.found[hash] ?= new Set()
-          task.found[hash].add peerConn.id
+        for piece in pieces
+          # track pieces peer has to its connection
+          peerConn.pieces[hash].add piece
+
+          # set to found for pieces haven't been downloaded
+          unless task.hit[piece]?
+            # move from missing to found
+            task.missing.delete piece
+            task.found[piece] ?= new Set()
+            task.found[piece].add peerConn.id
+        # FIXME: need test
+        @debug "DEBUG handshake result:", task.missing, task.found
 
       @peers.emit 'connect', peerConn if flagReconnect
 
