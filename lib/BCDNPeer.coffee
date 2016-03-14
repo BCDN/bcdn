@@ -98,6 +98,10 @@ exports = module.exports = class BCDNPeer
       # remove piece tracking for peer from task
       for hash, pieces of peerConn.pieces
         task = @download.tasks[hash]
+
+        # remove the pool for next exchange
+        task.available[peerConn.id]? and delete task.available[peerConn.id]
+
         for piece in pieces
           task.found[piece].delete peerConn.id
 
@@ -107,7 +111,7 @@ exports = module.exports = class BCDNPeer
             delete task.found[piece]
             task.missing.add piece
           # FIXME: need test
-        @debug "DEBUG close result:", task.missing, task.found
+        @debug "DEBUG close result:", task.missing, task.found, task.available
 
     @peers.on 'handshake', (peerConn, info) =>
       flagReconnect = false
@@ -127,6 +131,9 @@ exports = module.exports = class BCDNPeer
         {state, pieces} = tracking
         pieces = task.pieces if tracking.state == Task.SHARING
 
+        # prepare pool for next exchange
+        task.available[peerConn.id] ?= new Set()
+
         for piece in pieces
           # track pieces peer has to its connection
           peerConn.pieces[hash].add piece
@@ -137,8 +144,10 @@ exports = module.exports = class BCDNPeer
             task.missing.delete piece
             task.found[piece] ?= new Set()
             task.found[piece].add peerConn.id
+            task.available[peerConn.id] = piece
         # FIXME: need test
-        @debug "DEBUG handshake result:", task.missing, task.found
+        @debug "DEBUG handshake result:",
+               task.missing, task.found, task.available
 
       @peers.emit 'connect', peerConn if flagReconnect
 

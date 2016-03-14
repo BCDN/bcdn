@@ -10,14 +10,21 @@ exports = module.exports = class Task extends Resource
 
   debug: logger 'Task:debug'
 
+  # track of missing pieces, may be fetched from tracker
   # missing: Set[hash]
   missing: new Set()
+  # used to check if a piece is found in any peer
   # found[hash] => Set[peerId]
   found: {}
+  # FIXME: remove?
   # scheduled: Set[hash]
   scheduled: new Set()
+  # used to record downloaded pieces
   # hit[hash] => Piece
   hit: {}
+  # reverse of found, used for select next piece that get from peer
+  # available[peerId] => Set[hash]
+  available: {}
 
   blob: null
   state: Task.PREPARING
