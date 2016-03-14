@@ -17,6 +17,11 @@ opts = require 'optimist'
       alias: 'k'
       description: 'connection key'
       default: 'bcdn'
+    threads:
+      demand: false
+      alias: 'n'
+      description: 'number of concurrent threads for downloading'
+      default: 5
   .argv
 
 unless process.env.DEBUG

@@ -1,8 +1,10 @@
+EventEmiter = require 'events'
+
 PeerConnection = require './PeerConnection'
 
 logger = require 'debug'
 
-exports = module.exports = class PeerManager
+exports = module.exports = class PeerManager extends EventEmiter
   verbose: logger 'PeerManager:verbose'
   debug: logger 'PeerManager:debug'
   info: logger 'PeerManager:info'
@@ -16,33 +18,37 @@ exports = module.exports = class PeerManager
     {from, signal} = detail
     @peers[from].signal signal
 
-  accept: (id, cb) ->
-    # ignore self or connected peers
-    return if id is @self.id or id in Object.keys @peers
+  accept: (id) ->
+    # ignore self
+    return null if id is @self.id
+    # for connected peers
+    return peerConn if (peerConn = @peers[id])?
 
-    peerConn = @peers[id] = new PeerConnection id, wrtc: @wrtc
-    peerConn.on 'signal', (data) =>
-      @verbose "signal #{id}: #{data}"
-      cb 'signal', data
-    peerConn.on 'connect', =>
-      @info "connected from #{id}"
-      cb 'connect'
-    peerConn.on 'data', (data) =>
-      @verbose "got data from #{id}: #{data}"
-      cb 'data', data
+    @info "accpet connect to #{id}..."
+    return @peers[id] = @create id, false
 
-  connect: (id, cb) ->
-    # ignore self or connected peers
-    return if id is @self.id or id in Object.keys @peers
+  connect: (id) ->
+    # ignore self
+    return null if id is @self.id
+    # for connected peers
+    return peerConn if (peerConn = @peers[id])?
+
     @info "connect to #{id}..."
+    return @peers[id] = @create id, true
 
-    peerConn = @peers[id] = new PeerConnection id, initiator: true, wrtc: @wrtc
-    peerConn.on 'signal', (data) =>
-      @verbose "signal #{id}: #{data}"
-      cb 'signal', data
-    peerConn.on 'connect', =>
-      @info "connected to #{id}"
-      cb 'connect'
-    peerConn.on 'data', (data) =>
-      @verbose "got data from #{id}: #{data}"
-      cb 'data', data
+  create: (id, initiator) ->
+    @debug "create connection for #{id} (initiator=#{initiator})"
+    if initiator
+      peerConn = new PeerConnection id, initiator: true, wrtc: @wrtc
+    else
+      peerConn = new PeerConnection id, wrtc: @wrtc
+
+    peerConn.on 'SIGNAL', (data) =>
+      @verbose "ready to signal #{peerConn.id}"
+      @emit 'signal', peerConn, data
+    peerConn.on 'CONNECT', =>
+      @debug "connected to #{peerConn.id}"
+      @emit 'connect', peerConn
+    peerConn.on 'HELLO', (data) =>
+      @debug "got handshake from #{peerConn.id}"
+      @emit 'handshake', peerConn, data

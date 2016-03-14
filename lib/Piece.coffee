@@ -1,8 +1,9 @@
-exports = module.exports = class Piece
-  constructor: (@hash, @size) ->
-    @data = null
+EventEmiter = require 'events'
 
+exports = module.exports = class Piece extends EventEmiter
+  data: null
 
+  constructor: (@hash) ->
 
   # write the piece data after verified
   verifyAndWrite: (data) ->
