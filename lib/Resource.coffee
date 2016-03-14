@@ -4,10 +4,9 @@ Serializable = require './Serializable'
 mix = require './mix'
 
 exports = module.exports = class Resource extends mix EventEmiter, Serializable
-  pieces: null
-
   constructor: (@hash) ->
     super()
+    @pieces = null
 
   deserialize: (data) ->
     {@hash, @pieces} = super data

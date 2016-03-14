@@ -39,8 +39,7 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
       # handle incoming messages
       @on 'message', (data, flags) =>
         return handleMessage data unless flags.binary
-
-        # TODO handle binary data otherwise (initial piece)
+        @emit 'PIECE', data
 
 
       # handle close event
@@ -111,3 +110,4 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
 
   downloadResource: (hash) -> @send type: 'DOWNLOAD', payload: hash
   signal: (detail) ->         @send type: 'SIGNAL',   payload: detail
+  fetch: (piece) ->           @send type: 'FETCH',    payload: piece

@@ -1,15 +1,20 @@
 EventEmiter = require 'events'
 
+logger = require 'debug'
+
 exports = module.exports = class Piece extends EventEmiter
-  data: null
+  debug: logger 'Piece:debug'
 
   constructor: (@hash) ->
+    super()
 
   # write the piece data after verified
-  verifyAndWrite: (data) ->
+  write: (data) ->
     return if @data?
 
-    # TODO verify data integrity with hash and size
-
+    @debug "write data for #{@hash}"
     # write data if everything is OK
     @data = data
+
+    # and emit
+    @emit 'write'

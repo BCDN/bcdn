@@ -9,10 +9,11 @@ exports = module.exports = class PeerManager extends EventEmiter
   debug: logger 'PeerManager:debug'
   info: logger 'PeerManager:info'
 
-  peers: {}
-
   constructor: (@self, options) ->
     {@wrtc} = options
+
+    # peers[id] => PeerConenction
+    @peers = {}
 
   processSignal: (detail) ->
     {from, signal} = detail
@@ -43,15 +44,22 @@ exports = module.exports = class PeerManager extends EventEmiter
     else
       peerConn = new PeerConnection id, wrtc: @wrtc
 
-    peerConn.on 'SIGNAL', (data) =>
-      @verbose "ready to signal #{peerConn.id}"
-      @emit 'signal', peerConn, data
-    peerConn.on 'CONNECT', =>
-      @info "connected to #{peerConn.id}"
-      @emit 'connect', peerConn
-    peerConn.on 'CLOSE', =>
-      @info "peer #{peerConn.id} has closed the connection"
-      @emit 'close', peerConn
-    peerConn.on 'HELLO', (data) =>
-      @debug "got handshake from #{peerConn.id}"
-      @emit 'handshake', peerConn, data
+    do (peerConn) =>
+      peerConn.on 'SIGNAL', (data) =>
+        @verbose "ready to signal #{peerConn.id}"
+        @emit 'signal', peerConn, data
+      peerConn.on 'CONNECT', =>
+        @info "connected to #{peerConn.id}"
+        @emit 'connect', peerConn
+      peerConn.on 'CLOSE', =>
+        @info "peer #{peerConn.id} has closed the connection"
+        @emit 'close', peerConn
+      peerConn.on 'HELLO', (data) =>
+        @debug "got handshake from #{peerConn.id}"
+        @emit 'handshake', peerConn, data
+      peerConn.on 'NOTIFY', (data) =>
+        @debug "got notify from #{peerConn.id}"
+        @emit 'notify', peerConn, data
+
+  get: (id) => @peers[id]
+  delete: (id) => delete @peers[id] if @peers[id]?

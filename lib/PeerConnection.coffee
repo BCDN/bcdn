@@ -10,13 +10,13 @@ exports = module.exports = class PeerConnection extends mix SimplePeer
   debug: logger 'PeerConnection:debug'
   info: logger 'PeerConnection:info'
 
-  # tasks it attached to and pieces it has (don't notify resource it has)
-  # pieces[hash] => Set[pieces]
-  pieces: {}
-
   constructor: (@id, options) ->
     @debug "Create PeerConnection for #{@id}, initiator: #{!!options.initiator}"
     super options
+
+    # tasks it attached to and pieces it has (don't notify resource it has)
+    # pieces[hash] => Set[pieces]
+    @pieces = {}
 
     @on 'signal', (data) => @emit 'SIGNAL', data
     @on 'data', (data) =>
@@ -29,7 +29,7 @@ exports = module.exports = class PeerConnection extends mix SimplePeer
           return @debug "error to deserialize: #{e}, (data=#{JSON.stringify data})"
 
       # sanitize malformed messages
-      return unless content.type in ['HELLO']
+      return unless content.type in ['HELLO', 'NOTIFY']
 
       @verbose "peer has sent a message (id=#{@id}, data=#{data})"
 
@@ -43,4 +43,5 @@ exports = module.exports = class PeerConnection extends mix SimplePeer
     super content
     @verbose "message sent to peer: #{content}"
 
-  handshake: (payload) -> @send type: 'HELLO', payload: payload
+  handshake: (payload) -> @send type: 'HELLO',  payload: payload
+  notify: (payload)    -> @send type: 'NOTIFY', payload: payload
