@@ -52,7 +52,8 @@ peer = new BCDNPeer opts, ->
 
     console.log "Queue #{file} to the download list"
     task = peer.get file, (buffers) ->
-      buffer = Buffer.concat(buffers)
+      console.log "File #{file} was downloaded, hashing..."
+      buffer = Buffer.concat buffers
       hash = crypto.createHash('sha256').update(buffer).digest('hex')
 
       throw new Error "file has a wrong hash value!" if hash isnt task.hash

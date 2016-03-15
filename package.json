@@ -10,7 +10,7 @@
   "dependencies": {
     "coffee-script": "^1.10.0",
     "debug": "^2.2.0",
-    "simple-peer": "^5.11.9",
+    "simple-peer": "^6.0.2",
     "wrtc": "0.0.59",
     "ws": "^1.0.1"
   },

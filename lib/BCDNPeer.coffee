@@ -145,12 +145,40 @@ exports = module.exports = class BCDNPeer
           task.notify peerConn.id, piece
 
       @peers.emit 'connect', peerConn if flagReconnect
+      peerConn.emit 'NEXT' unless peerConn.demanding
 
     @peers.on 'notify', (peerConn, payload) =>
       {resource, piece} = payload
       peerConn.pieces[resource].add piece
       if (task = @download.tasks[resource])?
         task.notify peerConn.id, piece
+
+    @peers.on 'demand', (peerConn, hash) =>
+      piece = @pieces.get hash
+      peerConn.sendLength piece.data.length
+      peerConn.sendPiece piece.data
+
+    @peers.on 'length', (peerConn, length) =>
+      peerConn.pieceLength = length
+      peerConn.pieceBuffers = []
+
+    @peers.on 'piece', (peerConn, buffer) =>
+      peerConn.pieceBuffers.push buffer
+      peerConn.pieceLength -= buffer.length
+
+      if peerConn.pieceLength is 0
+        mergedBuffer = Buffer.concat peerConn.pieceBuffers
+        @pieces.write mergedBuffer
+        peerConn.emit 'NEXT'
+
+    @peers.on 'next', (peerConn) =>
+      peerConn.demanding = true
+      for hash in Object.keys peerConn.pieces
+        task = @download.tasks[hash]
+        if (pieces = task.available[peerConn.id])?
+          if (hash = pieces.values().next().value)?
+            return peerConn.demand hash
+      peerConn.demanding = false
 
 
   get: (path, onFinish) ->
