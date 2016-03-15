@@ -110,12 +110,15 @@ exports = module.exports = class BCDNPeer
         task.available[peerConn.id]? and delete task.available[peerConn.id]
 
         pieces.forEach (piece) =>
+          return unless task.found[piece]?
           task.found[piece].delete peerConn.id
 
           # if no more peer has this piece, unschedule it move it back to missing
           if task.found[piece].size is 0
             delete task.found[piece]
             task.missing.add piece
+
+        task.emit 'fetch' unless task.fetching?
 
     @peers.on 'handshake', (peerConn, info) =>
       flagReconnect = false
@@ -176,21 +179,25 @@ exports = module.exports = class BCDNPeer
     # add job to fetch random missing piece from tracker
     task.on 'fetch', =>
       if task.missing.size is 0
-        task.fetching = false
+        @debug "DEBUG: fetcher stop!", task.found
+        task.fetching = null
         return
 
-      task.fetching = true
       i = Math.floor Math.random() * task.missing.size
       next = Array.from(task.missing)[i]
+      task.fetching = next
       task.missing.delete next
       @trackerConn.fetch next
 
     # notify peer on write piece
     task.on 'write', (hash) =>
+      # for every peer tracked by the task
       for peer, hashs of task.available
+        # for notify them if they don't have that piece
         unless hashs.has hash
-          if (peerConn = @peers.get id)?
+          if (peerConn = @peers.get peer)?
             peerConn.notify resource: task.hash, piece: hash
+      task.emit 'fetch' if hash is task.fetching
 
     if task.blob?
       # if the task has downloaded the resource, callback with the blob

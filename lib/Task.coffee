@@ -41,14 +41,13 @@ exports = module.exports = class Task extends Resource
       @missing.delete hash
       @found[hash] ?= new Set()
       @found[hash].add peer
-      @available[peer] = hash
+      @available[peer].add hash
 
   write: (hash) ->
     @missing.delete hash
     if (peers = @found[hash])?
       delete @found[hash]
-      peers.forEach (peer) =>
-      @available[peer].delete hash
+      peers.forEach (peer) => @available[peer].delete hash
     @hit.add hash
     @emit 'write', hash
 
