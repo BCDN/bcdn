@@ -164,47 +164,48 @@ exports = module.exports = class BCDNPeer
     # queue the resource or get current task
     task = @download.queue hash
 
-    # start working once prepared
-    task.on 'prepared', =>
-      # bind piece to task
-      for hash in task.pieces
-        do (piece = @pieces.prepare hash) =>
-          if piece.data?
-            task.write piece.hash
-          else
-            piece.on 'write', => task.write piece.hash
-      # start fetch job
-      task.emit 'fetch'
+    do (task) =>
+      # start working once prepared
+      task.on 'prepared', =>
+        # bind piece to task
+        for hash in task.pieces
+          do (piece = @pieces.prepare hash) =>
+            if piece.data?
+              task.write piece.hash
+            else
+              piece.on 'write', => task.write piece.hash
+        # start fetch job
+        task.emit 'fetch'
 
-    # add job to fetch random missing piece from tracker
-    task.on 'fetch', =>
-      if task.missing.size is 0
-        @debug "DEBUG: fetcher stop!", task.found
-        task.fetching = null
-        return
+      # add job to fetch random missing piece from tracker
+      task.on 'fetch', =>
+        if task.missing.size is 0
+          @debug "DEBUG: fetcher stop!", task.found
+          task.fetching = null
+          return
 
-      i = Math.floor Math.random() * task.missing.size
-      next = Array.from(task.missing)[i]
-      task.fetching = next
-      task.missing.delete next
-      @trackerConn.fetch next
+        i = Math.floor Math.random() * task.missing.size
+        next = Array.from(task.missing)[i]
+        task.fetching = next
+        task.missing.delete next
+        @trackerConn.fetch next
 
-    # notify peer on write piece
-    task.on 'write', (hash) =>
-      # for every peer tracked by the task
-      for peer, hashs of task.available
-        # for notify them if they don't have that piece
-        unless hashs.has hash
-          if (peerConn = @peers.get peer)?
-            peerConn.notify resource: task.hash, piece: hash
-      task.emit 'fetch' if hash is task.fetching
+      # notify peer on write piece
+      task.on 'write', (hash) =>
+        # for every peer tracked by the task
+        for peer, hashs of task.available
+          # for notify them if they don't have that piece
+          unless hashs.has hash
+            if (peerConn = @peers.get peer)?
+              peerConn.notify resource: task.hash, piece: hash
+        task.emit 'fetch' if hash is task.fetching
 
-    if task.blob?
-      # if the task has downloaded the resource, callback with the blob
-      onFinish task.blob
-    else
-      # otherwise call back on task finish downloading the resource
-      task.on 'downloaded', => onFinish task.blob
+      if task.blob?
+        # if the task has downloaded the resource, callback with the blob
+        onFinish task.blob
+      else
+        # otherwise call back on task finish downloading the resource
+        task.on 'downloaded', => onFinish task.blob
 
-    # return the task
-    return task
+      # return the task
+      return task

@@ -6,7 +6,7 @@ Piece = require './Piece'
 logger = require 'debug'
 
 exports = module.exports = class PieceManager extends EventEmiter
-  debug: logger 'PieceManager:debug'
+  verbose: logger 'PieceManager:verbose'
 
   constructor: ->
     super()
@@ -21,5 +21,5 @@ exports = module.exports = class PieceManager extends EventEmiter
     hash = crypto.createHash('sha256').update(buffer).digest 'hex'
     return unless (piece = @pieces[hash])?
 
-    @debug "write piece #{hash}"
+    @verbose "write piece #{hash}"
     piece.write buffer

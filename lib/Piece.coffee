@@ -3,7 +3,7 @@ EventEmiter = require 'events'
 logger = require 'debug'
 
 exports = module.exports = class Piece extends EventEmiter
-  debug: logger 'Piece:debug'
+  verbose: logger 'Piece:verbose'
 
   constructor: (@hash) ->
     super()
@@ -12,7 +12,7 @@ exports = module.exports = class Piece extends EventEmiter
   write: (data) ->
     return if @data?
 
-    @debug "write data for #{@hash}"
+    @verbose "write data for #{@hash}"
     # write data if everything is OK
     @data = data
 

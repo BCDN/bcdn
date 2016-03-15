@@ -58,7 +58,7 @@ exports = module.exports = class PeerManager extends EventEmiter
         @debug "got handshake from #{peerConn.id}"
         @emit 'handshake', peerConn, data
       peerConn.on 'NOTIFY', (data) =>
-        @debug "got notify from #{peerConn.id}"
+        @verbose "got notify from #{peerConn.id}"
         @emit 'notify', peerConn, data
 
   get: (id) => @peers[id]
