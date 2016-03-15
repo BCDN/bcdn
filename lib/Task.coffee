@@ -26,7 +26,7 @@ exports = module.exports = class Task extends Resource
     # available[peerId] => Set[hash]
     @available = {}
 
-    @blob = null
+    @finished = false
     @state = Task.PREPARING
 
   prepared: ->
@@ -49,11 +49,14 @@ exports = module.exports = class Task extends Resource
       delete @found[hash]
       peers.forEach (peer) => @available[peer].delete hash
     @hit.add hash
+
+    # check finishing
+    @downloaded() if @missing.size is 0 and Object.keys(@found).length is 0
     @emit 'write', hash
 
-  downloaded: (pieces) ->
+  downloaded: ->
     if @state is Task.DOWNLOADING
-      @blob = new Blob pieces
+      @finished = true
       @state = Task.SHARING
       @emit 'downloaded'
 

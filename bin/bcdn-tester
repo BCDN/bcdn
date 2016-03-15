@@ -1,6 +1,7 @@
 #!/usr/bin/env coffee
 
 path = require 'path'
+crypto = require 'crypto'
 pkg = require '../package.json'
 version = pkg.version
 BCDNPeer = require('..').BCDNPeer
@@ -22,12 +23,41 @@ opts = require 'optimist'
       alias: 'n'
       description: 'number of concurrent threads for downloading'
       default: 5
+    files:
+      demand: false
+      alias: 'f'
+      description: 'files to be downloaded, if not provided, ' +
+                   'first file in contents will be downloaded'
+      default: null
   .argv
 
 unless process.env.DEBUG
   process.on 'uncaughtException', (err) ->
-    console.error "Error: #{err}"
+    console.error "#{err}"
+    process.exit 1
 
 opts.wrtc = require 'wrtc'
-peer = new BCDNPeer opts, (peer) ->
+peer = new BCDNPeer opts, ->
   console.log "Peer initialzed (v. #{version})"
+  console.log "[Peer will seed after finish downloading, press Ctrl+C to stop]"
+  console.log()
+
+  {files} = opts
+  files = [files] if files? and (not (files instanceof Array))
+  files = new Set files
+  files.add Object.keys(peer.contents.resources)[0] if files.size is 0
+
+  files.forEach (file) ->
+    file = file.toString()
+
+    console.log "Queue #{file} to the download list"
+    task = peer.get file, (buffers) ->
+      buffer = Buffer.concat(buffers)
+      hash = crypto.createHash('sha256').update(buffer).digest('hex')
+
+      throw new Error "file has a wrong hash value!" if hash isnt task.hash
+      console.log "File #{file} was downloaded successfully"
+
+    task.on 'prepared', -> console.log "File #{file} starts to download!"
+
+    throw new Error "file #{file} was not in contents." unless task?

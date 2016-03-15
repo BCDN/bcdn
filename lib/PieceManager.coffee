@@ -14,12 +14,14 @@ exports = module.exports = class PieceManager extends EventEmiter
     # pieces[hash] => Piece
     @pieces = {}
 
-  prepare: (hash) => @pieces[hash] ?= new Piece hash
+  prepare: (hash) -> @pieces[hash] ?= new Piece hash
 
-  write: (buffer) =>
+  write: (buffer) ->
     # hash it before write
     hash = crypto.createHash('sha256').update(buffer).digest 'hex'
     return unless (piece = @pieces[hash])?
 
     @verbose "write piece #{hash}"
     piece.write buffer
+
+  get: (hash) -> @pieces[hash]

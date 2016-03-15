@@ -1,11 +1,9 @@
-_ = require 'lodash/core'
-
 Serializable = require './Serializable'
 
 exports = module.exports = class Contents extends Serializable
   constructor: ->
     @timestamp = 0
-    @resources = {} # path => {size, hash, auto}
+    @resources = {} # path => {size, hash}
 
 
 
@@ -14,10 +12,9 @@ exports = module.exports = class Contents extends Serializable
 
     # update resources
     for path, newRes of resources
-      oldRes = @resources[path]
-      unless _.isEqual oldRes, newRes
+      unless (oldRes = @resources[path])? and (oldRes.hash == newRes.hash)
         @resources[path] = newRes
-        cb path, newRes
+        cb path, oldRes, newRes
 
     # update timestamp
     @timestamp = timestamp

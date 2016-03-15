@@ -42,13 +42,9 @@ exports = module.exports = class BCDNPeer
       @info "tracker has accepted the join request, peer ID: #{@peer.id}"
     # got contents updates
     @trackerConn.on 'UPDATE', (payload) =>
-      @contents.deserialize payload, (path, resource) =>
-        @debug "FIXME: #{path} has changed to resource: #{resource.hash}!"
-
-        # if the resource requires auto-load or is tracking, fetch it's pieces
-        if resource.auto # TODO: or tracked resources
-          @get path, (blob) =>
-            console.log "#{path} has finished downloading."
+      @contents.deserialize payload, (path, oldHash, newHash) =>
+        # TODO handle path related change, not important
+        return
 
       @debug "contents has been updated: #{@contents.serialize()}"
       onUpdate()
@@ -93,7 +89,7 @@ exports = module.exports = class BCDNPeer
         # set state
         info[hash] = state: task.state
         # set pieces if it's downloading
-        if task.state == Task.DOWNLOADING
+        if task.state is Task.DOWNLOADING
           info[hash].pieces = Array.from task.hit
 
       peerConn.handshake info
@@ -118,24 +114,25 @@ exports = module.exports = class BCDNPeer
             delete task.found[piece]
             task.missing.add piece
 
-        task.emit 'fetch' unless task.fetching?
+        if task.state is Task.DOWNLOADING and not task.fetching?
+          task.emit 'fetch'
 
     @peers.on 'handshake', (peerConn, info) =>
       flagReconnect = false
-
       for hash, tracking of info
         # for downloading tasks only
         task = @download.tasks[hash]
-        continue unless task.state == Task.DOWNLOADING
 
         # attach tasks if not added
         unless peerConn.pieces[hash]?
           peerConn.pieces[hash] = new Set()
           flagReconnect = true
 
+        continue unless task.state is Task.DOWNLOADING
+
         # retrieve pieces from tracking info
         {state, pieces} = tracking
-        pieces = task.pieces if tracking.state == Task.SHARING
+        pieces = task.pieces if tracking.state is Task.SHARING
 
         # prepare pool for next exchange
         task.available[peerConn.id] ?= new Set()
@@ -159,7 +156,7 @@ exports = module.exports = class BCDNPeer
   get: (path, onFinish) ->
     # get resource metadata
     return unless (metadata = @contents.resources[path])?
-    {size, hash, auto} = metadata
+    {size, hash} = metadata
 
     # queue the resource or get current task
     task = @download.queue hash
@@ -180,7 +177,6 @@ exports = module.exports = class BCDNPeer
       # add job to fetch random missing piece from tracker
       task.on 'fetch', =>
         if task.missing.size is 0
-          @debug "DEBUG: fetcher stop!", task.found
           task.fetching = null
           return
 
@@ -200,12 +196,15 @@ exports = module.exports = class BCDNPeer
               peerConn.notify resource: task.hash, piece: hash
         task.emit 'fetch' if hash is task.fetching
 
-      if task.blob?
+      if task.finished
         # if the task has downloaded the resource, callback with the blob
-        onFinish task.blob
+        onFinish @buffersFor task
       else
         # otherwise call back on task finish downloading the resource
-        task.on 'downloaded', => onFinish task.blob
+        task.on 'downloaded', => onFinish @buffersFor task
 
       # return the task
       return task
+
+  buffersFor: (task) ->
+    (piece = @pieces.get hash) and piece.data for hash in task.pieces
