@@ -1,26 +1,15 @@
-_ = require 'lodash/core'
+EventEmiter = require 'events'
+
 Serializable = require './Serializable'
-ResourceState = require './ResourceState'
+mix = require './mix'
 
-exports = module.exports = class Resource extends Serializable
-  constructor: (@hash, @size, @auto) ->
-    @blob = null
-    @uploadSize = 0
+exports = module.exports = class Resource extends mix EventEmiter, Serializable
+  constructor: (@hash) ->
+    super()
     @pieces = null
-    @state = null
 
-  # update resource from tracker node (note: only called once when preparing)
-  prepare: (data) ->
-    @pieces = @deserialize data
+  deserialize: (data) ->
+    {@hash, @pieces} = super data
 
-  # get blob for resource
-  # TODO: check if update arraybuffer will update blob data
-  getBlob: ->
-    return @blob if @blob?
-
-    if @state in [ResourceState.PREPARING, ResourceState.DOWNLOADING]
-      return null
-
-    pieces = [] # TODO: query resource manager for pieces
-
-    @blob = new Blob pieces
+  serialize: ->
+    super hash: @hash, pieces: @pieces

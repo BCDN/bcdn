@@ -3,18 +3,23 @@ Serializable = require './Serializable'
 exports = module.exports = class Contents extends Serializable
   constructor: ->
     @timestamp = 0
-    @resources = {} # path => {hash, size, auto}
+    @resources = {} # path => {size, hash}
 
-  # update contents from tracker node (note: might be called multiple times)
-  update: (data) ->
-    {_timestamp, _resources} = @deserialize data
+
+
+  deserialize: (data, cb) ->
+    {timestamp, resources} = super data
 
     # update resources
-    for path, newRes of _resources
-      oldRes = @resources[path]
-      unless _.isEqual oldHash, newHash
+    for path, newRes of resources
+      unless (oldRes = @resources[path])? and (oldRes.hash == newRes.hash)
         @resources[path] = newRes
-        # TODO: notify ResourceManager that resource requires update!
+        cb path, oldRes, newRes
 
     # update timestamp
-    @timestamp = _timestamp
+    @timestamp = timestamp
+
+
+
+  serialize: ->
+    super timestamp: @timestamp, resources: @resources
