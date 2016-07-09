@@ -67,7 +67,7 @@ exports = module.exports = class PeerManager extends EventEmiter
         @verbose "got piece length from #{peerConn.id}"
         @emit 'length', peerConn, data
       peerConn.on 'PIECE', (data) =>
-        @verbose "got piece from #{peerConn.id}"
+        @info "got piece from #{peerConn.id}"
         @emit 'piece', peerConn, data
       peerConn.on 'NEXT', =>
         @verbose "ready to fetch next piece from #{peerConn.id}"
