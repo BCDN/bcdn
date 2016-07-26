@@ -5,6 +5,7 @@ PeerManager = require './PeerManager'
 DownloadManager = require './DownloadManager'
 PieceManager = require './PieceManager'
 Task = require './Task'
+Util = require './Util'
 
 logger = require 'debug'
 
@@ -15,18 +16,16 @@ exports = module.exports = class BCDNPeer
 
   constructor: (options, onUpdate) ->
     # parse options
-    default_options =
-      key: 'bcdn'
+    default_options = key: 'bcdn'
     default_options extends options
-
-    {trackers, key} = options
+    options.token ?= Util.generateToken()
 
 
     # initialize variables
-    @peer = new Peer key
+    @peer = new Peer options
     @contents = new Contents()
-    @trackerConn = new TrackerConnection trackers, @peer
-    @peers = new PeerManager @peer, options
+    @trackerConn = new TrackerConnection options
+    @peers = new PeerManager options
     @download = new DownloadManager options
     @pieces = new PieceManager options
 
@@ -56,6 +55,10 @@ exports = module.exports = class BCDNPeer
       # connect all possible candidates
       task = @download.tasks[hash]
       candidates.forEach (peer) =>
+        # prevent connect to itself, this is not necessary since candidates
+        # are sent to this peer before track itself, but added just in case.
+        return if peer is @peer.id
+
         if (peerConn = @peers.connect peer)?
 
           # attach current task to peer connection

@@ -18,6 +18,16 @@ opts = require 'optimist'
       alias: 'k'
       description: 'connection key'
       default: 'bcdn'
+    id:
+      demand: false
+      alias: 'i'
+      description: 'specify peer ID'
+      default: null
+    token:
+      demand: false
+      alias: 's'
+      description: 'specify peer token (session secret)'
+      default: null
     threads:
       demand: false
       alias: 'n'

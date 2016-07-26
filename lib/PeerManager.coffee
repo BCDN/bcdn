@@ -9,7 +9,7 @@ exports = module.exports = class PeerManager extends EventEmiter
   debug: logger 'PeerManager:debug'
   info: logger 'PeerManager:info'
 
-  constructor: (@self, options) ->
+  constructor: (options) ->
     {@wrtc} = options
 
     # peers[id] => PeerConenction
@@ -20,8 +20,6 @@ exports = module.exports = class PeerManager extends EventEmiter
     @peers[from].signal signal
 
   accept: (id) ->
-    # ignore self
-    return null if id is @self.id
     # for connected peers
     return peerConn if (peerConn = @peers[id])?
 
@@ -29,8 +27,6 @@ exports = module.exports = class PeerManager extends EventEmiter
     return @peers[id] = @create id, false
 
   connect: (id) ->
-    # ignore self
-    return null if id is @self.id
     # for connected peers
     return peerConn if (peerConn = @peers[id])?
 

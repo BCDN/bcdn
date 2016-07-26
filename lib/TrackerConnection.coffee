@@ -12,11 +12,12 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
   info: logger 'TrackerConnection:info'
   error: logger 'TrackerConnection:error'
 
-  constructor: (trackers = [], @peer) ->
+  constructor: (options) ->
+    {@trackers, @key, @token} = options
+
     # TODO: maybe move to disconnect event for exception handling (reconnect)?
-    @selectNearestTracker trackers, (tracker) =>
-      generateToken = -> Math.random().toString(36).substr(2)
-      super "#{tracker}&token=#{@peer.token ?= generateToken()}"
+    @selectNearestTracker (tracker) =>
+      super "#{tracker}&token=#{@token}"
 
       # helper to handle message
       handleMessage = (data, close = false) =>
@@ -50,16 +51,16 @@ exports = module.exports = class TrackerConnection extends mix WebSocket
 
 
 
-  selectNearestTracker: (trackers, cb) ->
-    @info "selecting the nearest tracker from #{trackers}..."
+  selectNearestTracker: (cb) ->
+    @info "selecting the nearest tracker from #{@trackers}..."
 
     minPing = Infinity
     nearestTracker = null
 
 
     # select the tracker with least ping
-    for tracker in trackers
-      url = "#{tracker}?key=#{@peer.key}"
+    for tracker in @trackers
+      url = "#{tracker}?key=#{@key}"
       socket = new WebSocket url
 
       socket.on 'error', (error) =>
