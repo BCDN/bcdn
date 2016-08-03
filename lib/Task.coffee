@@ -1,13 +1,9 @@
 Resource = require './Resource'
+TaskState = require './TaskState'
 
 logger = require 'debug'
 
 exports = module.exports = class Task extends Resource
-  @PREPARING   : 1
-  @DOWNLOADING : 2
-  @SHARING     : 3
-  @DONE        : 4
-
   debug: logger 'Task:debug'
 
   constructor: (hash) ->
@@ -27,11 +23,11 @@ exports = module.exports = class Task extends Resource
     @available = {}
 
     @finished = false
-    @state = Task.PREPARING
+    @state = TaskState.PREPARING
 
   prepared: ->
-    if @state is Task.PREPARING
-      @state = Task.DOWNLOADING
+    if @state is TaskState.PREPARING
+      @state = TaskState.DOWNLOADING
       @emit 'prepared'
 
   notify: (peer, hash) ->
@@ -55,12 +51,12 @@ exports = module.exports = class Task extends Resource
     @emit 'write', hash
 
   downloaded: ->
-    if @state is Task.DOWNLOADING
+    if @state is TaskState.DOWNLOADING
       @finished = true
-      @state = Task.SHARING
+      @state = TaskState.SHARING
       @emit 'downloaded'
 
   done: ->
-    if @state is Task.SHARING
-      @state = Task.DONE
+    if @state is TaskState.SHARING
+      @state = TaskState.DONE
       @emit 'done'

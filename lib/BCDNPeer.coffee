@@ -4,7 +4,7 @@ TrackerConnection = require './TrackerConnection'
 PeerManager = require './PeerManager'
 DownloadManager = require './DownloadManager'
 PieceManager = require './PieceManager'
-Task = require './Task'
+TaskState = require './TaskState'
 Util = require './Util'
 
 logger = require 'debug'
@@ -92,7 +92,7 @@ exports = module.exports = class BCDNPeer
         # set state
         info[hash] = state: task.state
         # set pieces if it's downloading
-        if task.state is Task.DOWNLOADING
+        if task.state is TaskState.DOWNLOADING
           info[hash].pieces = Array.from task.hit
 
       peerConn.handshake info
@@ -117,7 +117,7 @@ exports = module.exports = class BCDNPeer
             delete task.found[piece]
             task.missing.add piece
 
-        if task.state is Task.DOWNLOADING and not task.fetching?
+        if task.state is TaskState.DOWNLOADING and not task.fetching?
           task.emit 'fetch'
 
     @peers.on 'handshake', (peerConn, info) =>
@@ -131,11 +131,11 @@ exports = module.exports = class BCDNPeer
           peerConn.pieces[hash] = new Set()
           flagReconnect = true
 
-        continue unless task.state is Task.DOWNLOADING
+        continue unless task.state is TaskState.DOWNLOADING
 
         # retrieve pieces from tracking info
         {state, pieces} = tracking
-        pieces = task.pieces if tracking.state is Task.SHARING
+        pieces = task.pieces if tracking.state is TaskState.SHARING
 
         # prepare pool for next exchange
         task.available[peerConn.id] ?= new Set()
