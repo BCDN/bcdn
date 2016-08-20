@@ -62,7 +62,6 @@ exports = module.exports = class BCDNPeer
         if (peerConn = @peers.connect peer)?
 
           # attach current task to peer connection
-          # TODO: remove the attached task after task has finished
           peerConn.pieces[task.hash] = new Set()
 
           # resend hello if new task was added
@@ -135,7 +134,7 @@ exports = module.exports = class BCDNPeer
 
         # retrieve pieces from tracking info
         {state, pieces} = tracking
-        pieces = task.pieces if tracking.state is TaskState.SHARING
+        pieces = task.pieces if state is TaskState.SHARING
 
         # prepare pool for next exchange
         task.available[peerConn.id] ?= new Set()
