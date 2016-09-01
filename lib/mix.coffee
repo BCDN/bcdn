@@ -4,9 +4,13 @@
 # Credit: CoffeeScript Cookbook
 # https://coffeescript-cookbook.github.io/chapters/classes_and_objects/mixins
 
-exports = module.exports = (base, mixins...) ->
+mix = (base, mixins...) ->
+  # @nodoc
   class Mixed extends base
-  for mixin in mixins by -1 #earlier mixins override later ones
+  # earlier mixins override later ones.
+  for mixin in mixins by -1
     for name, method of mixin::
       Mixed::[name] = method
   Mixed
+
+exports = module.exports = mix
