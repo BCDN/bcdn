@@ -2,19 +2,33 @@ EventEmiter = require 'events'
 
 logger = require 'debug'
 
-exports = module.exports = class Piece extends EventEmiter
-  verbose: logger 'Piece:verbose'
+# Piece data model.
+class Piece extends EventEmiter
+  # @property [String] hash value for this piece.
+  hash: null
+  # @property [Buffer] buffer contains binary data of this piece.
+  data: null
 
-  constructor: (@hash) ->
-    super()
+  # Construct a empty Piece object with its hash value.
+  #
+  # @param [String] hash hash value of the piece.
+  constructor: (@hash) -> super()
 
-  # write the piece data after verified
+  # Write the piece data after verified.
+  #
+  # @param [Buffer] data buffer contains binary data to be written.
   write: (data) ->
+    # don't write it if already written.
     return if @data?
 
-    @verbose "write data for #{@hash}"
-    # write data if everything is OK
+    @verbose "writing data for #{@hash}"
+
+    # write data if not yet be written.
     @data = data
 
-    # and emit
+    # and emit the `write` event.
     @emit 'write'
+
+  verbose: logger 'Piece:verbose'
+
+exports = module.exports = Piece
