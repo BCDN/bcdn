@@ -5,6 +5,7 @@ class Serializable
   # @param [Object] obj arbitrary object to be serialized.
   # @return [String] JSON-encoded string that contains the serialized object.
   serialize: (obj) -> JSON.stringify obj
+
   # Default method to deserialize a JSON-encoded string back to the object.
   #
   # @param [String] data JSON-encoded string to be deserialized.
