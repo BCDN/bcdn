@@ -1,9 +1,14 @@
+EventEmiter = require 'events'
+
+mix = require './mix'
+
+Serializable = require './Serializable'
 Resource = require './Resource'
 TaskState = require './TaskState'
 
 logger = require 'debug'
 
-exports = module.exports = class Task extends Resource
+exports = module.exports = class Task extends mix EventEmiter, Resource
   debug: logger 'Task:debug'
 
   constructor: (hash) ->
