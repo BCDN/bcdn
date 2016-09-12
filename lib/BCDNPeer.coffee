@@ -68,9 +68,9 @@ exports = module.exports = class BCDNPeer
           @peers.emit 'connect', peerConn if peerConn.connected
 
     @trackerConn.on 'SIGNAL', (payload) =>
-      peer = payload.from
-      @peers.accept peer
-      @peers.processSignal payload
+      {from, signal} = payload
+      peer = @peers.accept from
+      peer.signal signal
 
     @trackerConn.on 'PIECE', (buffer) =>
       @pieces.write buffer

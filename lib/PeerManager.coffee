@@ -15,12 +15,8 @@ exports = module.exports = class PeerManager extends EventEmiter
     # peers[id] => PeerConenction
     @peers = {}
 
-  processSignal: (detail) ->
-    {from, signal} = detail
-    @peers[from].signal signal
-
   accept: (id) ->
-    # for connected peers
+    # for created peers
     return peerConn if (peerConn = @peers[id])?
 
     @info "accpet connect to #{id}..."
@@ -42,7 +38,7 @@ exports = module.exports = class PeerManager extends EventEmiter
 
     do (peerConn) =>
       peerConn.on 'SIGNAL', (data) =>
-        @verbose "ready to signal #{peerConn.id}"
+        @info "ready to signal #{peerConn.id}"
         @emit 'signal', peerConn, data
       peerConn.on 'CONNECT', =>
         @info "connected to #{peerConn.id}"
