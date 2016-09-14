@@ -9,19 +9,21 @@ Util = require './Util'
 
 logger = require 'debug'
 
-exports = module.exports = class BCDNPeer
-  debug: logger 'BCDNPeer:debug'
-  info: logger 'BCDNPeer:info'
-  error: logger 'BCDNPeer:error'
-
+# Entry point of peer node.
+class BCDNPeer
+  # Create a BCDN peer instance.
+  #
+  # @param [Object<String, ?>] options options for the peer node instance.
+  # @param [Function] onUpdate callback function when contents gets updated.
   constructor: (options, onUpdate) ->
-    # parse options
+    # apply default options.
     default_options = key: 'bcdn'
     default_options extends options
+
+    # generate default token (if not provided).
     options.token ?= Util.generateToken()
 
-
-    # initialize variables
+    # initialize data models and managers.
     @peer = new Peer options
     @contents = new Contents()
     @trackerConn = new TrackerConnection options
@@ -29,30 +31,29 @@ exports = module.exports = class BCDNPeer
     @download = new DownloadManager options
     @pieces = new PieceManager options
 
-
-    # report error on tracker connection error
+    # setup handles for tracker connection.
     @trackerConn.on 'ERROR', (payload) =>
       {msg} = payload
       @error msg
-    # save peer id after joined the network
+
     @trackerConn.on 'JOINED', (payload) =>
       {id} = payload
       @peer.id = id
       @info "tracker has accepted the join request, peer ID: #{@peer.id}"
-    # got contents updates
+
     @trackerConn.on 'UPDATE', (payload) =>
       @contents.deserialize payload, (path, oldHash, newHash) =>
-        # TODO handle path related change, not important
+        # future work: handle path related change, not important
         return
 
       @debug "contents has been updated: #{@contents.serialize()}"
       onUpdate()
-    # resource info received
+
     @trackerConn.on 'RESOURCE', (payload) =>
       {hash, resource, candidates} = payload
       @download.prepare hash, resource
 
-      # connect all possible candidates
+      # connect all possible candidates.
       task = @download.tasks[hash]
       candidates.forEach (peer) =>
         # prevent connect to itself, this is not necessary since candidates
@@ -60,11 +61,9 @@ exports = module.exports = class BCDNPeer
         return if peer is @peer.id
 
         if (peerConn = @peers.connect peer)?
-
-          # attach current task to peer connection
+          # attach current task to peer connection.
           peerConn.pieces[task.hash] = new Set()
-
-          # resend hello if new task was added
+          # resend hello if new task was added.
           @peers.emit 'connect', peerConn if peerConn.connected
 
     @trackerConn.on 'SIGNAL', (payload) =>
@@ -75,43 +74,44 @@ exports = module.exports = class BCDNPeer
     @trackerConn.on 'PIECE', (buffer) =>
       @pieces.write buffer
 
+    # setup handles for tracker download manager.
     @download.on 'ready', (task) =>
       @info "start task #{task.hash}"
       @trackerConn.downloadResource hash: task.hash
 
+    # setup handles for tracker peer manager.
     @peers.on 'signal', (peerConn, data) =>
       @trackerConn.signal to: peerConn.id, signal: data
 
     @peers.on 'connect', (peerConn) =>
-      # construct information for handshaking we has for this peer
-      # info[resourceHash] => state: TaskState, pieces: [piecesHit]
+      # construct information for handshaking we has for this peer.
+      # info[resourceHash] => state: TaskState, pieces: [piecesHit].
       info = {}
       for hash in Object.keys peerConn.pieces
         task = @download.tasks[hash]
-        # set state
+        # set state of current task.
         info[hash] = state: task.state
-        # set pieces if it's downloading
+        # set pieces if it's downloading.
         if task.state is TaskState.DOWNLOADING
           info[hash].pieces = Array.from task.hit
-
       peerConn.handshake info
 
     @peers.on 'close', (peerConn) =>
-      # remove from peer list
+      # remove from peer list.
       @peers.delete peerConn.id
 
-      # remove piece tracking for peer from task
+      # remove piece tracking for peer from task.
       for hash, pieces of peerConn.pieces
         task = @download.tasks[hash]
 
-        # remove the pool for next exchange
+        # remove the pool for next exchange.
         task.available[peerConn.id]? and delete task.available[peerConn.id]
 
         pieces.forEach (piece) =>
           return unless task.found[piece]?
           task.found[piece].delete peerConn.id
 
-          # if no more peer has this piece, unschedule it move it back to missing
+          # if no more peer has this piece, unschedule it move it back to missing.
           if task.found[piece].size is 0
             delete task.found[piece]
             task.missing.add piece
@@ -122,28 +122,27 @@ exports = module.exports = class BCDNPeer
     @peers.on 'handshake', (peerConn, info) =>
       flagReconnect = false
       for hash, tracking of info
-        # for downloading tasks only
+        # for downloading tasks only.
         task = @download.tasks[hash]
 
-        # attach tasks if not added
+        # attach tasks if not added.
         unless peerConn.pieces[hash]?
           peerConn.pieces[hash] = new Set()
           flagReconnect = true
 
         continue unless task.state is TaskState.DOWNLOADING
 
-        # retrieve pieces from tracking info
+        # retrieve pieces from tracking info.
         {state, pieces} = tracking
         pieces = task.pieces if state is TaskState.SHARING
 
-        # prepare pool for next exchange
+        # prepare pool for next exchange.
         task.available[peerConn.id] ?= new Set()
 
         for piece in pieces
-          # track pieces peer has to its connection
+          # track pieces peer has to its connection.
           peerConn.pieces[hash].add piece
-
-          # notify task
+          # notify task.
           task.notify peerConn.id, piece
 
       @peers.emit 'connect', peerConn if flagReconnect
@@ -182,29 +181,34 @@ exports = module.exports = class BCDNPeer
             return peerConn.demand hash
       peerConn.demanding = false
 
-
+  # Get a resource by its path.
+  #
+  # @param [String] path path of the resource.
+  # @param [Function] onFinish callback function when a resource downloading task has been finished.
+  # @option onFinish [Array<Buffer>] buffers all buffers of the task.
+  # @return [Task] the downloading task.
   get: (path, onFinish) ->
-    # get resource metadata
+    # get resource metadata.
     return unless (metadata = @contents.resources[path])?
     {size, hash} = metadata
 
-    # queue the resource or get current task
+    # queue the resource or get current task.
     task = @download.queue hash
 
     do (task) =>
-      # start working once prepared
+      # start working once prepared.
       task.on 'prepared', =>
-        # bind piece to task
+        # bind piece to task.
         for hash in task.pieces
           do (piece = @pieces.prepare hash) =>
             if piece.data?
               task.write piece.hash
             else
               piece.on 'write', => task.write piece.hash
-        # start fetch job
+        # start fetch job.
         task.emit 'fetch'
 
-      # add job to fetch random missing piece from tracker
+      # add job to fetch random missing piece from tracker.
       task.on 'fetch', =>
         if task.missing.size is 0
           task.fetching = null
@@ -216,25 +220,35 @@ exports = module.exports = class BCDNPeer
         task.missing.delete next
         @trackerConn.fetch next
 
-      # notify peer on write piece
+      # notify peer on write piece.
       task.on 'write', (hash) =>
-        # for every peer tracked by the task
+        # for every peer tracked by the task.
         for peer, hashs of task.available
-          # for notify them if they don't have that piece
+          # for notify them if they don't have that piece.
           unless hashs.has hash
             if (peerConn = @peers.get peer)?
               peerConn.notify resource: task.hash, piece: hash
         task.emit 'fetch' if hash is task.fetching
 
       if task.finished
-        # if the task has downloaded the resource, callback with the blob
+        # if the task has downloaded the resource, callback with the blob.
         onFinish @buffersFor task
       else
-        # otherwise call back on task finish downloading the resource
+        # otherwise call back on task finish downloading the resource.
         task.on 'downloaded', => onFinish @buffersFor task
 
-      # return the task
+      # return the task.
       return task
 
+  # Get all buffers of a task.
+  #
+  # @param [Task] task the task reference.
+  # @return [Array<Buffer>] all buffers of the task.
   buffersFor: (task) ->
     (piece = @pieces.get hash) and piece.data for hash in task.pieces
+
+  debug: logger 'BCDNPeer:debug'
+  info: logger 'BCDNPeer:info'
+  error: logger 'BCDNPeer:error'
+
+exports = module.exports = BCDNPeer
