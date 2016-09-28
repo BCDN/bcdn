@@ -1,5 +1,7 @@
+EventEmiter = require 'events'
+
 #  Peer data model.
-class Peer
+class Peer extends EventEmiter
   # @property [String] connection key of this peer.
   key: null
   # @property [String] full peer ID (with leading tracker ID).
@@ -11,6 +13,7 @@ class Peer
   #
   # @param [Object] properties properties of this peer.
   constructor: (properties) ->
+    super()
     {@key, @id, @token} = properties
 
 exports = module.exports = Peer
