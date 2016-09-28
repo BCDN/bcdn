@@ -47,6 +47,8 @@ unless process.env.DEBUG
     process.exit 1
 
 opts.wrtc = require 'wrtc'
+opts.trackers = opts.t = [opts.trackers] unless opts.trackers instanceof Array
+
 peer = new BCDNPeer opts, ->
   console.log "Peer initialzed (v. #{version})"
   console.log "[Peer will seed after finish downloading, press Ctrl+C to stop]"
