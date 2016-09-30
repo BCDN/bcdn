@@ -68,26 +68,26 @@ class TrackerConnection extends mix WebSocket, Serializable
     # select the tracker with least ping
     for tracker in @trackers
       url = "#{tracker}?key=#{@key}"
-      socket = new WebSocket url
+      do (socket = new WebSocket url) =>
 
-      socket.on 'error', (error) =>
-        @debug "error on ping tracker - #{error}"
+        socket.on 'error', (error) =>
+          @debug "error on ping tracker - #{error}"
 
-      now = undefined
-      socket.on 'pong', =>
-        ping = new Date().getTime() - now
-        @debug "ping for #{tracker}: #{ping}ms"
+        now = undefined
+        socket.on 'pong', =>
+          ping = new Date().getTime() - now
+          @debug "ping for #{tracker}: #{ping}ms"
 
-        if ping < minPing
-          minPing = ping
-          nearestTracker = url
+          if ping < minPing
+            minPing = ping
+            nearestTracker = url
 
-        socket.close()
+          socket.close()
 
-      socket.on 'open', =>
-        now = new Date().getTime()
-        socket.ping 'HELLO'
-        @debug "pinging #{tracker}..."
+        socket.on 'open', =>
+          now = new Date().getTime()
+          socket.ping 'HELLO'
+          @debug "pinging #{tracker}..."
 
     # wait for result
     waitTimeout = 10000 # 10 seconds
