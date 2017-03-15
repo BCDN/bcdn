@@ -1,11 +1,13 @@
 Serializable = require './Serializable'
 
 # Contents data model.
+#
+# @extend Serializable
 class Contents extends Serializable
   # @property [Number] timestamp of contents update time.
   timestamp: 0
   # @property [Object<String, Object>] list of all resource records (with its size and hash value) indexed by its path.
-  resources: {}
+  resources: null
 
   # Override {Serializable#deserialize}.
   #
@@ -18,6 +20,7 @@ class Contents extends Serializable
     {timestamp, resources} = super data
 
     # update resources
+    @resources ?= {}
     for path, newRes of resources
       unless (oldRes = @resources[path])? and (oldRes.hash == newRes.hash)
         @resources[path] = newRes

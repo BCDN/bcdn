@@ -46,7 +46,7 @@
     "url": "ssh://git@git.vizv.com:2222/bcdn/bcdn.git"
   },
   "scripts": {
-    "start": "coffee bin/bcdn-tester",
+    "start": "coffee -c .; coffee bin/bcdn-tester",
     "postinstall": "coffee -c .",
     "clean": "rm *.js; find lib -type f -name '*.js' -exec rm '{}' \\;"
   },

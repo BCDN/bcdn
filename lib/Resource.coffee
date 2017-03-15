@@ -1,11 +1,13 @@
 Serializable = require './Serializable'
 
 # Resource data model.
+#
+# @extend Serializable
 class Resource extends Serializable
   # @property [String] hash value for this resource.
   hash: null
   # @property [Array<String>] list of hash values for pieces of this resource.
-  pieces: []
+  pieces: null
 
   # Construct a empty Resource object with its hash value.
   #

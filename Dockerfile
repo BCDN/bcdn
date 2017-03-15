@@ -4,17 +4,19 @@ MAINTAINER Wenxuan Zhao <viz@linux.com>
 COPY package.json /app/
 WORKDIR /app
 
-ENV DEPS='build-essential python git-all pkg-config libncurses5-dev libssl-dev libnss3-dev libexpat-dev'
+ENV DEPS='build-essential python git-all pkg-config libncurses5-dev \
+          libssl-dev libnss3-dev libexpat-dev'
 
-RUN apt-get update \
-    && apt-get install -y $DEPS \
-    && npm -g install coffee-script \
-    && npm install \
-    && apt-get purge -y $DEPS \
-    && apt-get --purge autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+RUN useradd -m -s /bin/bash -u 1000 -U app \
+ && apt-get update \
+ && apt-get install -y $DEPS \
+ && npm -g install coffee-script \
+ && npm install \
+ && apt-get purge -y $DEPS \
+ && apt-get --purge autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
+USER app
 
-COPY . /app/
-RUN coffee -c .
+COPY . /app
 
-ENTRYPOINT ["coffee", "bin/bcdn-tester"]
+CMD ["npm", "start"]

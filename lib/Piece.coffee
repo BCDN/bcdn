@@ -3,6 +3,8 @@ EventEmiter = require 'events'
 logger = require 'debug'
 
 # Piece data model.
+#
+# @extend EventEmiter
 class Piece extends EventEmiter
   # @property [String] hash value for this piece.
   hash: null
@@ -21,7 +23,7 @@ class Piece extends EventEmiter
     # don't write it if already written.
     return if @data?
 
-    @verbose "writing data for #{@hash}"
+    @debug "-- writing data for #{@hash}"
 
     # write data if not yet be written.
     @data = data
@@ -29,6 +31,6 @@ class Piece extends EventEmiter
     # and emit the `write` event.
     @emit 'write'
 
-  verbose: logger 'Piece:verbose'
+  debug: logger 'Piece:debug'
 
 exports = module.exports = Piece

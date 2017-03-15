@@ -1,6 +1,8 @@
 EventEmiter = require 'events'
 
-#  Peer data model.
+# Peer data model.
+#
+# @extend EventEmiter
 class Peer extends EventEmiter
   # @property [String] connection key of this peer.
   key: null

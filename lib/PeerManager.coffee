@@ -5,17 +5,20 @@ PeerConnection = require './PeerConnection'
 logger = require 'debug'
 
 # Manager for peer connections.
+#
+# @extend EventEmiter
 class PeerManager extends EventEmiter
   # @property [WRTC] wrtc instance for headless testing.
   wrtc: null
-  # @property [Object<String, PeerConnection>] peer connections indexed by peer ID.
-  peers: {}
+  # @property [Object<String, PeerConnection>] peer connections indexed by peer ID (Object<peerId, peerConn>).
+  peers: null
 
   # Create a peer manager instance.
   #
   # @param [Object<String, ?>] options options from {BCDNPeer} for initialize this peer manager.
   constructor: (options) ->
     {@wrtc} = options
+    @peers = {}
 
   # Accept an incoming connection.
   #
@@ -25,7 +28,7 @@ class PeerManager extends EventEmiter
     # for created peers
     return peerConn if (peerConn = @peers[id])?
 
-    @info "accpet connect to #{id}..."
+    @info "-- prepare connection to peer[id=#{id}, mode=passive]..."
     return @peers[id] = @create id, false
 
   # Attempt to connect another peer.
@@ -36,7 +39,7 @@ class PeerManager extends EventEmiter
     # for connected peers
     return peerConn if (peerConn = @peers[id])?
 
-    @info "connect to #{id}..."
+    @info "-- prepare connection to peer[id=#{id}, mode=active]..."
     return @peers[id] = @create id, true
 
   # Create a connection instance.
@@ -45,39 +48,48 @@ class PeerManager extends EventEmiter
   # @param [Boolean] initiator true if this peer initiate the connection.
   # @return [PeerConnection] the connection instance.
   create: (id, initiator) ->
-    @debug "create connection for #{id} (initiator=#{initiator})"
     if initiator
       peerConn = new PeerConnection id, initiator: true, wrtc: @wrtc
     else
       peerConn = new PeerConnection id, wrtc: @wrtc
+    peerConn.signalCount = 0
 
     do (peerConn) =>
       peerConn.on 'SIGNAL', (data) =>
-        @info "ready to signal #{peerConn.id}"
+        @info "!P [event=SIGNAL]: ready to signal " +
+              "peer[id=#{peerConn.id}, seq=#{++peerConn.signalCount}]"
         @emit 'signal', peerConn, data
       peerConn.on 'CONNECT', =>
-        @info "connected to #{peerConn.id}"
+        @info "*P [event=CONNECT]: connected to peer[id=#{peerConn.id}] " +
+              "after #{peerConn.signalCount} signals"
         @emit 'connect', peerConn
       peerConn.on 'CLOSE', =>
-        @info "peer #{peerConn.id} has closed the connection"
+        @info "*P [event=CLOSE]: peer[id=#{peerConn.id}] has closed " +
+              "the connection"
         @emit 'close', peerConn
       peerConn.on 'HELLO', (data) =>
-        @debug "got handshake from #{peerConn.id}"
+        @info "<P [event=HELLO]: got HELLO packet from peer[id=#{peerConn.id}]"
         @emit 'handshake', peerConn, data
       peerConn.on 'NOTIFY', (data) =>
-        @verbose "got notify from #{peerConn.id}"
+        @info "<P [event=NOTIFY]: got NOTIFY packet from " +
+              "peer[id=#{peerConn.id}] for " +
+              "piece[resource=#{data.resource}, hash=#{data.piece}]"
         @emit 'notify', peerConn, data
       peerConn.on 'DEMAND', (data) =>
-        @verbose "got demand from #{peerConn.id}"
+        @info "<P [event=DEMAND]: got DEMAND packet from " +
+              "peer[id=#{peerConn.id}] for piece[hash=#{data}]"
         @emit 'demand', peerConn, data
       peerConn.on 'LENGTH', (data) =>
-        @verbose "got piece length from #{peerConn.id}"
+        @info "<P [event=LENGTH]: got LENGTH packet from " +
+              "peer[id=#{peerConn.id}] - #{data}"
         @emit 'length', peerConn, data
       peerConn.on 'PIECE', (data) =>
-        @info "got piece from #{peerConn.id}"
+        @info "<P [event=PIECE]: got PIECE packet from " +
+              "peer[id=#{peerConn.id}] - #{data.length}"
         @emit 'piece', peerConn, data
       peerConn.on 'NEXT', =>
-        @verbose "ready to fetch next piece from #{peerConn.id}"
+        @info "<P [event=NEXT]: ready to fetch next piece from " +
+              "peer[id=#{peerConn.id}]"
         @emit 'next', peerConn
 
   # Get existing connection by peer ID.
@@ -91,8 +103,6 @@ class PeerManager extends EventEmiter
   # @param [String] id peer ID to be deleted.
   delete: (id) => delete @peers[id] if @peers[id]?
 
-  verbose: logger 'PeerManager:verbose'
-  debug: logger 'PeerManager:debug'
   info: logger 'PeerManager:info'
 
 exports = module.exports = PeerManager

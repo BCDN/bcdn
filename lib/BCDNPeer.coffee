@@ -11,6 +11,19 @@ logger = require 'debug'
 
 # Entry point of peer node.
 class BCDNPeer
+  # @property [Peer] the peer itself.
+  peer: null
+  # @property [Contents] contents for the namespace (or key) that this peer visits.
+  contents: null
+  # @property [TrackerConnection] the connection between this peer and its tracker.
+  trackerConn: null
+  # @property [PeerManager] the manager for peer connection management.
+  peers: null
+  # @property [DownloadManager] the download manager.
+  download: null
+  # @property [PieceManager] the manager for pieces of tasks.
+  pieces: null
+
   # Create a BCDN peer instance.
   #
   # @param [Object<String, ?>] options options for the peer node instance.
@@ -34,50 +47,64 @@ class BCDNPeer
     # setup handles for tracker connection.
     @trackerConn.on 'ERROR', (payload) =>
       {msg} = payload
-      @error msg
+      @info "<T [event=ERROR]: #{msg}"
+      # note: since the connection will be closed from tracker-side,
+      #       error handling is not required.
 
     @trackerConn.on 'JOINED', (payload) =>
       {id} = payload
       @peer.id = id
-      @info "tracker has accepted the join request, peer ID: #{@peer.id}"
+
+      @info "*T [event=CONNECT]: connected to " +
+            "tracker[id=#{@peer.id.substr(0, @peer.id.indexOf('-'))}]"
+      @info "<T [event=JOINED]: got JOINED packet from tracker, " +
+            "assigning peer ID - #{@peer.id}"
 
     @trackerConn.on 'UPDATE', (payload) =>
       @contents.deserialize payload, (path, oldHash, newHash) =>
         # future work: handle path related change, not important
         return
 
-      @debug "contents has been updated: #{@contents.serialize()}"
+      @info "<T [event=UPDATE]: got UPDATE packet from tracker"
       onUpdate()
 
     @trackerConn.on 'RESOURCE', (payload) =>
       {hash, resource, candidates} = payload
-      @download.prepare hash, resource
+
+      @info "<T [event=RESOURCE]: got RESOURCE packet from tracker, " +
+            "adding task[hash=#{hash}] with available candidates - " +
+            "#{candidates.join ', '}"
+      task = @download.prepare hash, resource
 
       # connect all possible candidates.
-      task = @download.tasks[hash]
       candidates.forEach (peer) =>
         # prevent connect to itself, this is not necessary since candidates
-        # are sent to this peer before track itself, but added just in case.
+        # are sent to this peer before track itself, but just in case...
         return if peer is @peer.id
 
-        if (peerConn = @peers.connect peer)?
-          # attach current task to peer connection.
-          peerConn.pieces[task.hash] = new Set()
-          # resend hello if new task was added.
-          @peers.emit 'connect', peerConn if peerConn.connected
+        peerConn = @peers.connect peer
+
+        # attach current task to peer connection. TODO: reset? or just initialize?
+        peerConn.pieces[task.hash] = new Set()
+        # resend hello if new task was added.
+        @peers.emit 'connect', peerConn if peerConn.connected
 
     @trackerConn.on 'SIGNAL', (payload) =>
       {from, signal} = payload
+
+      @info "<T [event=SIGNAL]: got SIGNAL packet from peer[id=#{from}] " +
+            "via tracker"
       peer = @peers.accept from
       peer.signal signal
 
     @trackerConn.on 'PIECE', (buffer) =>
-      @pieces.write buffer
+      @info "<T [event=PIECE]: got PIECE packet from tracker"
+      @pieces.write buffer, 'tracker'
 
     # setup handles for tracker download manager.
     @download.on 'ready', (task) =>
-      @info "start task #{task.hash}"
-      @trackerConn.downloadResource hash: task.hash
+      @info "-- start task[hash=#{task.hash}]"
+      @trackerConn.downloadResource task.hash
 
     # setup handles for tracker peer manager.
     @peers.on 'signal', (peerConn, data) =>
@@ -85,7 +112,6 @@ class BCDNPeer
 
     @peers.on 'connect', (peerConn) =>
       # construct information for handshaking we has for this peer.
-      # info[resourceHash] => state: TaskState, pieces: [piecesHit].
       info = {}
       for hash in Object.keys peerConn.pieces
         task = @download.tasks[hash]
@@ -111,7 +137,8 @@ class BCDNPeer
           return unless task.found[piece]?
           task.found[piece].delete peerConn.id
 
-          # if no more peer has this piece, unschedule it move it back to missing.
+          # if no more peer has this piece,
+          # unschedule it and add it back to missing.
           if task.found[piece].size is 0
             delete task.found[piece]
             task.missing.add piece
@@ -122,7 +149,7 @@ class BCDNPeer
     @peers.on 'handshake', (peerConn, info) =>
       flagReconnect = false
       for hash, tracking of info
-        # for downloading tasks only.
+        # for download tasks only.
         task = @download.tasks[hash]
 
         # attach tasks if not added.
@@ -146,13 +173,14 @@ class BCDNPeer
           task.notify peerConn.id, piece
 
       @peers.emit 'connect', peerConn if flagReconnect
-      peerConn.emit 'NEXT' unless peerConn.demanding
+      peerConn.emit 'NEXT' unless peerConn.demandingLock
 
     @peers.on 'notify', (peerConn, payload) =>
       {resource, piece} = payload
       peerConn.pieces[resource].add piece
       if (task = @download.tasks[resource])?
         task.notify peerConn.id, piece
+      peerConn.emit 'NEXT' unless peerConn.demandingLock
 
     @peers.on 'demand', (peerConn, hash) =>
       piece = @pieces.get hash
@@ -169,24 +197,33 @@ class BCDNPeer
 
       if peerConn.pieceLength is 0
         mergedBuffer = Buffer.concat peerConn.pieceBuffers
-        @pieces.write mergedBuffer
+        @pieces.write mergedBuffer, "peer[#{peerConn.id}]"
         peerConn.emit 'NEXT'
 
     @peers.on 'next', (peerConn) =>
-      peerConn.demanding = true
+      peerConn.demandingLock = true
+
+      # for the resource hash of each task bound to this peer connection
+      # demand next missing piece available from any task.
       for hash in Object.keys peerConn.pieces
         task = @download.tasks[hash]
         if (pieces = task.available[peerConn.id])?
           if (hash = pieces.values().next().value)?
             return peerConn.demand hash
-      peerConn.demanding = false
+
+      # TODO: better options: select the piece the least peers owned.
+      #                       select the piece the most task requests.
+      #                       select the piece in random order.
+      #       They are not being implemented since they requires stats module.
+
+      peerConn.demandingLock = false
 
   # Get a resource by its path.
   #
   # @param [String] path path of the resource.
-  # @param [Function] onFinish callback function when a resource downloading task has been finished.
+  # @param [Function] onFinish callback function when a resource download task has been finished.
   # @option onFinish [Array<Buffer>] buffers all buffers of the task.
-  # @return [Task] the downloading task.
+  # @return [Task] the download task.
   get: (path, onFinish) ->
     # get resource metadata.
     return unless (metadata = @contents.resources[path])?
@@ -198,7 +235,7 @@ class BCDNPeer
     do (task) =>
       # start working once prepared.
       task.on 'prepared', =>
-        # bind piece to task.
+        # create and/or bind piece to task.
         for hash in task.pieces
           do (piece = @pieces.prepare hash) =>
             if piece.data?
@@ -210,25 +247,28 @@ class BCDNPeer
 
       # add job to fetch random missing piece from tracker.
       task.on 'fetch', =>
-        if task.missing.size is 0
+        missing = Array.from task.missing
+
+        if missing.length is 0
           task.fetching = null
           return
 
-        i = Math.floor Math.random() * task.missing.size
-        next = Array.from(task.missing)[i]
+        i = Math.floor Math.random() * missing.length
+        next = missing[i]
         task.fetching = next
-        task.missing.delete next
         @trackerConn.fetch next
 
       # notify peer on write piece.
-      task.on 'write', (hash) =>
-        # for every peer tracked by the task.
-        for peer, hashs of task.available
-          # for notify them if they don't have that piece.
-          unless hashs.has hash
-            if (peerConn = @peers.get peer)?
-              peerConn.notify resource: task.hash, piece: hash
-        task.emit 'fetch' if hash is task.fetching
+      task.on 'write', (pieceHash) =>
+        # for each peer bound to this task...
+        # notify them only if they don't have this piece.
+        for peerId in Object.keys task.available
+          continue unless (peerConn = @peers.get peerId)?
+          continue if peerConn.pieces[task.hash].has pieceHash
+          peerConn.notify resource: task.hash, piece: pieceHash
+
+        # if this piece is fetched from tracker, fetch the next piece.
+        task.emit 'fetch' if pieceHash is task.fetching
 
       if task.finished
         # if the task has downloaded the resource, callback with the blob.
@@ -249,6 +289,5 @@ class BCDNPeer
 
   debug: logger 'BCDNPeer:debug'
   info: logger 'BCDNPeer:info'
-  error: logger 'BCDNPeer:error'
 
 exports = module.exports = BCDNPeer

@@ -4,6 +4,11 @@
 # Credit: CoffeeScript Cookbook
 # https://coffeescript-cookbook.github.io/chapters/classes_and_objects/mixins
 
+# The mixin helper.
+#
+# @param [Class] base the base class.
+# @param [Class] mixins more classes to be mixed.
+# @return [Class] the mixed class.
 mix = (base, mixins...) ->
   # @nodoc
   class Mixed extends base
