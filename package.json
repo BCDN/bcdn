@@ -8,10 +8,9 @@
     "url": "https://git.vizv.com/bcdn/bcdn/issues"
   },
   "dependencies": {
-    "coffee-script": "^1.10.0",
-    "debug": "^2.2.0",
-    "lodash": "^4.5.1",
-    "simple-peer": "^5.11.9",
+    "coffee-script": "1.10.0",
+    "debug": "2.2.0",
+    "simple-peer": "5.11.9",
     "wrtc": "0.0.59",
     "ws": "^1.0.1"
   },
@@ -47,9 +46,9 @@
     "url": "ssh://git@git.vizv.com:2222/bcdn/bcdn.git"
   },
   "scripts": {
-    "start": "coffee bin/bcdn-tester",
+    "start": "coffee -c .; coffee bin/bcdn-tester",
     "postinstall": "coffee -c .",
     "clean": "rm *.js; find lib -type f -name '*.js' -exec rm '{}' \\;"
   },
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

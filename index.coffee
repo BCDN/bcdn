@@ -1,23 +1,8 @@
-Contents = require './lib/Contents'
-TrackerConnection = require './lib/TrackerConnection'
-
-module.exports = class BCDN
-  constructor: (options, callbacks) ->
-    default_options =
-      key: 'bcdn'
-    default_options extends options
-
-    {trackers, key} = options
-
-    @contents = new Contents()
-    @trackerConn = new TrackerConnection trackers, key
-
-    # report error
-    @trackerConn.on 'ERROR', (payload) ->
-      {msg} = payload
-      @constructor.error msg
-
-    # save peer id after joined
-    @trackerConn.on 'JOINED', (payload) ->
-      {id} = payload
-      @constructor.info "tracker has accepted the join request, peer ID: #{id}"
+exports = module.exports =
+  BCDNPeer:      require './lib/BCDNPeer'
+  Contents:      require './lib/Contents'
+  Resource:      require './lib/Resource'
+  Peer:          require './lib/Peer'
+  Serializable:  require './lib/Serializable'
+  Util:          require './lib/Util'
+  mix:           require './lib/mix'

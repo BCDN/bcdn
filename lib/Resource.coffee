@@ -1,26 +1,29 @@
-_ = require 'lodash/core'
 Serializable = require './Serializable'
-ResourceState = require './ResourceState'
 
-exports = module.exports = class Resource extends Serializable
-  constructor: (@hash, @size, @auto) ->
-    @blob = null
-    @uploadSize = 0
-    @pieces = null
-    @state = null
+# Resource data model.
+#
+# @extend Serializable
+class Resource extends Serializable
+  # @property [String] hash value for this resource.
+  hash: null
+  # @property [Array<String>] list of hash values for pieces of this resource.
+  pieces: null
 
-  # update resource from tracker node (note: only called once when preparing)
-  prepare: (data) ->
-    @pieces = @deserialize data
+  # Construct a empty Resource object with its hash value.
+  #
+  # @param [String] hash hash value of the resource.
+  constructor: (@hash) -> super()
 
-  # get blob for resource
-  # TODO: check if update arraybuffer will update blob data
-  getBlob: ->
-    return @blob if @blob?
+  # Override {Serializable#deserialize}.
+  #
+  # @param [String] see {Serializable#deserialize}.
+  deserialize: (data) ->
+    {@hash, @pieces} = super data
 
-    if @state in [ResourceState.PREPARING, ResourceState.DOWNLOADING]
-      return null
+  # Override {Serializable#serialize}.
+  #
+  # @return [String] see {Serializable#serialize}.
+  serialize: ->
+    super hash: @hash, pieces: @pieces
 
-    pieces = [] # TODO: query resource manager for pieces
-
-    @blob = new Blob pieces
+exports = module.exports = Resource

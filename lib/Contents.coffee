@@ -1,20 +1,38 @@
 Serializable = require './Serializable'
 
-exports = module.exports = class Contents extends Serializable
-  constructor: ->
-    @timestamp = 0
-    @resources = {} # path => {hash, size, auto}
+# Contents data model.
+#
+# @extend Serializable
+class Contents extends Serializable
+  # @property [Number] timestamp of contents update time.
+  timestamp: 0
+  # @property [Object<String, Object>] list of all resource records (with its size and hash value) indexed by its path.
+  resources: null
 
-  # update contents from tracker node (note: might be called multiple times)
-  update: (data) ->
-    {_timestamp, _resources} = @deserialize data
+  # Override {Serializable#deserialize}.
+  #
+  # @param [String] data string of serialized contents object.
+  # @param [Function] callback callback function gets invoked for each changed resources.
+  # @option callback [String] path path of the changed resource.
+  # @option callback [String] oldRes record for old resource.
+  # @option callback [String] newRes record for new resource.
+  deserialize: (data, callback) ->
+    {timestamp, resources} = super data
 
     # update resources
-    for path, newRes of _resources
-      oldRes = @resources[path]
-      unless _.isEqual oldHash, newHash
+    @resources ?= {}
+    for path, newRes of resources
+      unless (oldRes = @resources[path])? and (oldRes.hash == newRes.hash)
         @resources[path] = newRes
-        # TODO: notify ResourceManager that resource requires update!
+        callback path, oldRes, newRes
 
     # update timestamp
-    @timestamp = _timestamp
+    @timestamp = timestamp
+
+  # Override {Serializable#serialize}.
+  #
+  # @return [String] see {Serializable#serialize}.
+  serialize: ->
+    super timestamp: @timestamp, resources: @resources
+
+exports = module.exports = Contents
