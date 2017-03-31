@@ -50,5 +50,5 @@
     "postinstall": "coffee -c .",
     "clean": "rm *.js; find lib -type f -name '*.js' -exec rm '{}' \\;"
   },
-  "version": "0.2.0"
+  "version": "0.2.1"
 }
