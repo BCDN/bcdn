@@ -205,15 +205,17 @@ class BCDNPeer
 
       # for the resource hash of each task bound to this peer connection
       # demand next missing piece available from any task.
-      for hash in Object.keys peerConn.pieces
-        task = @download.tasks[hash]
-        if (pieces = task.available[peerConn.id])?
-          if (hash = pieces.values().next().value)?
-            return peerConn.demand hash
+      for resourceHash in Object.keys peerConn.pieces
+        task = @download.tasks[resourceHash]
+        pieces = Array.from task.available[peerConn.id] || []
+
+        unless pieces.length is 0
+          i = Math.floor Math.random() * pieces.length
+          next = pieces[i]
+          return peerConn.demand next
 
       # TODO: better options: select the piece the least peers owned.
       #                       select the piece the most task requests.
-      #                       select the piece in random order.
       #       They are not being implemented since they requires stats module.
 
       peerConn.demandingLock = false
@@ -250,8 +252,10 @@ class BCDNPeer
         missing = Array.from task.missing
 
         if missing.length is 0
-          task.fetching = null
-          return
+          missing = Object.keys task.found
+          if missing.length is 0
+            task.fetching = null
+            return
 
         i = Math.floor Math.random() * missing.length
         next = missing[i]
